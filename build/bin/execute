@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+# Copyright 2023 Jerome Gasperi
+
+import argparse
+import textwrap
+import os
+import json
+import base64
+import sys
+sys.path.append('/process/')
+import process_module
+
+#####################################################################################
+#                    !!! DO NOT TOUCH ANYTHING BELOW THIS LINE !!!!!
+#####################################################################################
+
+DESCRIPTION = """execute a process triggered by resto OGC API Processes execute endPoint
+
+    Commands: execute [options]
+
+            Optional arguments:
+                --token                         job authorization token. This is a JWT unique to the job including the callback to the /jobs/{jobId} endpoint (superseed JOB_AUTH_TOKEN environnement variable)
+                --input                         job input encode in Base64 (superseed JSON_INPUT_BASE64 environnement variable)
+                --s3Host                        Target S3 host (superseed S3_HOST - default use value in settings.py from jjromrapid library)
+                --s3Bucket                      Target S3 bucket (superseed S3_BUCKET - default use value in settings.py from jjromrapid library
+                --s3Key                         Target S3 client key (superseed S3_KEY - default use value in settings.py from jjromrapid libra
+                --s3Secret                      Target S3 client key (superseed S3_SECRET - default use value in settings.py from jjromrapid libra
+                --s3Region                      Target S3 client key (superseed S3_REGION - default use value in settings.py from jjromrapid libra
+                
+            Environment variables:
+
+                JOB_AUTH_TOKEN
+                JSON_INPUT_BASE64
+                S3_HOST  
+                S3_BUCKET
+                S3_KEY   
+                S3_SECRET
+                S3_REGION
+
+            [IMPORTANT] Variable preseance is command line > environment variable > jjromrapid default settings (see https://github.com/jjrom/rapid/blob/main/rapid/settings.py)
+
+            Exit code:
+                0                   Success
+                1                   Error unknown (grave)
+                2                   Error - no features after optimization
+"""
+
+def args_options():
+    # Parser
+    parser = argparse.ArgumentParser(prog='deploy', formatter_class=argparse.RawDescriptionHelpFormatter, description=textwrap.dedent(DESCRIPTION))
+    parser.add_argument('--token', help='job authorization token. This is a JWT unique to the job including the callback to the /jobs/{jobId} endpoint (superseed JOB_AUTH_TOKEN environnement variable)')
+    parser.add_argument('--input', help='job input encode in Base64 (superseed JSON_INPUT_BASE64 environnement variable)')
+    parser.add_argument('--s3Host', help='Target S3 host (superseed S3_HOST - default use value in settings.py from jjromrapid library)')
+    parser.add_argument('--s3Bucket', help='Target S3 bucket (superseed S3_BUCKET - default use value in settings.py from jjromrapid library')
+    parser.add_argument('--s3Key', help='Target S3 client key (superseed S3_KEY - default use value in settings.py from jjromrapid library')
+    parser.add_argument('--s3Secret', help='Target S3 client key (superseed S3_SECRET - default use value in settings.py from jjromrapid library')
+    parser.add_argument('--s3Region', help='Target S3 client key (superseed S3_REGION - default use value in settings.py from jjromrapid library')
+    return parser
+
+def main(args):
+    """
+    Main function - launches the program
+    """
+    
+    config = {}
+    inputb64 = None
+
+    configKeys = [
+        'JOB_AUTH_TOKEN',
+        'S3_HOST',
+        'S3_BUCKET',
+        'S3_KEY',
+        'S3_SECRET',
+        'S3_REGION'
+    ]
+    for key in configKeys:
+        if os.environ.get(key):
+            config[key] = os.environ.get(key)
+    
+    if os.environ.get('JSON_INPUT_BASE64'):
+        inputb64 = os.environ.get('JSON_INPUT_BASE64')
+
+    if args != None:
+        if 'input' in args and args.input:
+            inputb64 = args.input
+        if 'token' in args and args.token:
+            config['JOB_AUTH_TOKEN'] = args.token
+        if 's3Host' in args and args.s3Host:
+            config['S3_HOST'] = args.s3Host
+        if 's3Bucket' in args and args.s3Bucket:
+            config['S3_BUCKET'] = args.s3Bucket
+        if 's3Key' in args and args.s3Key:
+            config['S3_KEY'] = args.s3Key
+        if 's3Secret' in args and args.s3Secret:
+            config['S3_SECRET'] = args.s3Secret
+        if 's3Region' in args and args.s3Region:
+            config['S3_REGION'] = args.s3Region
+
+    if config['JOB_AUTH_TOKEN'] == None:
+        print('[ERROR] Missing mandatory JOB_AUTH_TOKEN')
+        goodbye(1)
+
+    if inputb64 == None:
+        print('[ERROR] Missing mandatory JSON_INPUT_BASE64')
+        goodbye(1)
+
+    try:
+        convertedbytes = base64.b64decode(inputb64)
+        input = json.loads(convertedbytes.decode('ascii'))
+    except:
+        print('[ERROR] Cannot decode base64 input - ' + inputb64)
+        goodbye(1)
+
+    return process_module.execute(input, config)
+
+def goodbye(code):
+    sys.exit(code)
+
+#####################################
+def __main__():
+    parser = args_options()
+    args = parser.parse_args()
+    code = main(args)
+    goodbye(code)
+
+if __name__ == "__main__":
+    try:
+        __main__()
+    except (KeyboardInterrupt):
+        goodbye(1)
