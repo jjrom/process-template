@@ -6,14 +6,14 @@ RUN apt-get update && apt-get install -y \
     libgdal-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /tmp
+COPY ./requirements.txt /tmp
 RUN pip install -r /tmp/requirements.txt
 
 COPY bin/* /usr/local/bin
 RUN chmod 755 /usr/local/bin/*
 
 RUN mkdir /process
-COPY process/* /process
+COPY ./process/* /process
 
 # The S3 KEY/SECRET are dummy one generated from local minio server
 ENV PROCESS_API_ENDPOINT=http://host.docker.internal:5252/oapi-p\

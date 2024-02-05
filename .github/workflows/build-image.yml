@@ -8,7 +8,7 @@ env:
 on:
   push:
     paths:
-      - 'build/**'
+      - '**'
       - '.github/workflows/**'
   release:
     types: [created, edited]
@@ -37,7 +37,7 @@ jobs:
       if: ${{ startsWith(github.ref, 'refs/heads/main') && github.event_name != 'release' }}
       run: |
 
-        docker buildx build --push --platform linux/amd64,linux/arm64 --tag ${NAME}/${IMAGE}:latest --file ./build/Dockerfile .
+        docker buildx build --push --platform linux/amd64,linux/arm64 --tag ${NAME}/${IMAGE}:latest --file ./Dockerfile .
         
     - name: Tag latest release and push to repository
       if: ${{ github.event_name == 'release' }}
@@ -46,6 +46,6 @@ jobs:
         # Get latest release tag
         tag=$(git describe --tags --abbrev=0 | sed s/^v//)
         
-        docker buildx build --push --platform linux/amd64,linux/arm64 -t ${NAME}/${IMAGE}:latest -t ${NAME}/${IMAGE}:$tag --file ./build/Dockerfile .
+        docker buildx build --push --platform linux/amd64,linux/arm64 -t ${NAME}/${IMAGE}:latest -t ${NAME}/${IMAGE}:$tag --file ./Dockerfile .
       
       
